@@ -55,13 +55,15 @@ const int xMin = 10;        // define Min/home inputs
 const int yMin = 11;
 byte hMinVal;               // temporary Min input variable
 
+const int LASER = 12;       // define Laser switch output
+
 //Keeps track of the current direction relative to the face of the motor. 
 //Clockwise (true) or Counterclockwise(false)
 bool xClockwise = true;     // default to clockwise
 bool yClockwise = true;     // default to clockwise
 
 int TargetArr[] = {0, 1, 0, 1}; // 0 = x, 1 = y
-int TargetPositionArr[] = {15, 20, -15, -20};
+int TargetPositionArr[] = {150, 150, -150, -150};
 
 int moveCount = 0;          // loop used for drawing
 
@@ -72,6 +74,8 @@ AccelStepper stepperY(HALFSTEP, s2_in5, s2_in7, s2_in6, s2_in8);
 void setup() {
 
   //Serial.begin(9600);
+  pinMode(LASER, OUTPUT);         // set pin to output
+  digitalWrite(LASER, LOW);       // turn off the laser (for the calicration)
 
   // Setup home switch inputs (minimum travel)
   pinMode(xMin, INPUT);           // set pin to input
@@ -98,6 +102,8 @@ void setup() {
   stepperY.setSpeed(1000.0);
   stepperY.setMaxSpeed(1000.0);
   stepperY.setAcceleration(20000.0);
+
+    digitalWrite(LASER, HIGH);       // turn on the laser
 }
 
 void loop() {
