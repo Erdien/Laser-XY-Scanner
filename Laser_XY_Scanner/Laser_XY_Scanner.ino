@@ -62,8 +62,14 @@ const int LASER = 12;       // define Laser switch output
 bool xClockwise = true;     // default to clockwise
 bool yClockwise = true;     // default to clockwise
 
-int TargetArr[] = {0, 1, 0, 1}; // 0 = x, 1 = y
-int TargetPositionArr[] = {150, 150, -150, -150};
+int TargetArrSquare[] = {0, 1, 0, 1}; // 0 = x, 1 = y
+int TargetPositionArrSquare[] = {150, 150, -150, -150};
+
+int TargetPositionArrTriangleX[] = {100, 100,   -150};
+int TargetPositionArrTriangleY[] = {-150,   150, -150};
+
+int slowDrawProgressX = 0;
+int slowDrawProgressY = 0;
 
 int moveCount = 0;          // loop used for drawing
 
@@ -73,7 +79,7 @@ AccelStepper stepperY(HALFSTEP, s2_in5, s2_in7, s2_in6, s2_in8);
 
 void setup() {
 
-  //Serial.begin(9600);
+  Serial.begin(115200);
   pinMode(LASER, OUTPUT);         // set pin to output
   digitalWrite(LASER, LOW);       // turn off the laser (for the calicration)
 
@@ -103,20 +109,42 @@ void setup() {
   stepperY.setMaxSpeed(1000.0);
   stepperY.setAcceleration(20000.0);
 
-    digitalWrite(LASER, HIGH);       // turn on the laser
+  //while(!Serial){}
+  digitalWrite(LASER, HIGH);       // turn on the laser
 }
 
 void loop() {
 
   // Uncomment only one drawing function at a time, then experiment to make your own!
 
+  //calibrate();      // Helper method to manually steer motors with the help of serial. 
+
   drawSquare();     // Draw a square, uses values in TargetArr and TargetPositionArr
+  
+  //slowTriangle();
   
   //xyScan();       // Example XY Scan (change either x or y speed to around 30, one slow one fast)
 
   //If the stepper still needs to move (distanceToGo() != 0) then continue to advance (step) the motor
   stepperX.run();
   stepperY.run();
+}
+
+void calibrate(){
+  if(stepperX.distanceToGo() == 0 and stepperY.distanceToGo() == 0){
+    char messageSet[50], messageTarget[50];
+    int targetX, targetY;
+    sprintf(messageSet, "Current x: %ld; Current y: %ld", stepperX.currentPosition(), stepperY.currentPosition());
+    Serial.println(messageSet);
+    while (Serial.available() == 0);
+    targetX = Serial.parseInt();
+    targetY = Serial.parseInt();
+    sprintf(messageTarget, "Target x: %d; Target y: %d", targetX, targetY);
+    Serial.println(messageTarget);
+    stepperX.moveTo(targetX);
+    stepperY.moveTo(targetY);
+  }
+
 }
 
 void drawSquare(){
@@ -128,13 +156,41 @@ void drawSquare(){
       moveCount = moveCount + 1;
     }
 
-    if (TargetArr[moveCount] == 0) {
-      stepperX.moveTo(TargetPositionArr[moveCount]);
+    if (TargetArrSquare[moveCount] == 0) {
+      stepperX.moveTo(TargetPositionArrSquare[moveCount]);
     }
     else {
-      stepperY.moveTo(TargetPositionArr[moveCount]);
+      stepperY.moveTo(TargetPositionArrSquare[moveCount]);
     }
   }
+}
+
+void slowTriangle(){
+  if(stepperX.distanceToGo() == 0 and stepperY.distanceToGo() == 0){
+    if (slowDrawProgressX == TargetPositionArrTriangleX[moveCount] and slowDrawProgressY == TargetPositionArrTriangleY[moveCount]) {
+      if(moveCount == 2){
+        moveCount = 0;
+      } else {
+        moveCount = moveCount + 1;
+      }
+
+      //slowDrawProgressX = TargetPositionArrTriangleX[moveCount];
+      //slowDrawProgressY = TargetPositionArrTriangleY[moveCount];
+    }
+    
+    /*char message[190];
+    sprintf(message, "M: %d \tCX: %ld; SX: %d; TX: %d \tCY: %ld; SY: %d; TY: %d", moveCount, stepperX.currentPosition(), slowDrawProgressX, TargetPositionArrTriangleX[moveCount], stepperY.currentPosition(), slowDrawProgressX, TargetPositionArrTriangleX[moveCount]);
+    Serial.println(message);//*/
+    const int stepUnits = 5;
+
+    if(TargetPositionArrTriangleX[moveCount]<slowDrawProgressX) slowDrawProgressX -= stepUnits;
+    else if (TargetPositionArrTriangleX[moveCount]>slowDrawProgressX) slowDrawProgressX += stepUnits;
+    if(TargetPositionArrTriangleY[moveCount]<slowDrawProgressY) slowDrawProgressY -= stepUnits;
+    else if (TargetPositionArrTriangleY[moveCount]>slowDrawProgressY) slowDrawProgressY += stepUnits;
+
+    stepperX.moveTo(slowDrawProgressX);
+    stepperY.moveTo(slowDrawProgressY);
+  }  
 }
 
 void xyScan(){
@@ -173,7 +229,7 @@ void xStepperHome(){ //this routine should run the motor
     hMinVal = digitalRead(xMin);
   }
   stepperX.setCurrentPosition(0); //set current motor position to zero
-  stepperX.moveTo(-580);
+  stepperX.moveTo(-580-247);
   while (stepperX.distanceToGo() != 0){
     stepperX.run();
   }
@@ -190,7 +246,7 @@ void yStepperHome(){ //this routine should run the motor
     hMinVal = digitalRead(yMin);
   }
   stepperY.setCurrentPosition(0); //set current motor position to zero
-  stepperY.moveTo(-900);
+  stepperY.moveTo(-900+175);
   while (stepperY.distanceToGo() != 0){
     stepperY.run();
   }
