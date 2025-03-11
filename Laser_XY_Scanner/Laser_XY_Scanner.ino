@@ -51,6 +51,19 @@
 #define s2_in7 8
 #define s2_in8 9
 
+#define MIN_X -500
+#define MAX_X 500
+#define MIN_Y -500
+#define MAX_Y 500
+
+#define HEADER 0x5e   //"^" dec 94
+#define ACK 0x06
+#define NACK 0x15
+
+//#define MESSAGES
+
+bool stepperError;
+
 const int xMin = 10;        // define Min/home inputs
 const int yMin = 11;
 byte hMinVal;               // temporary Min input variable
@@ -110,6 +123,7 @@ void setup() {
   stepperY.setAcceleration(20000.0);
 
   //while(!Serial){}
+  stepperError = false;
   digitalWrite(LASER, HIGH);       // turn on the laser
 }
 
@@ -119,7 +133,9 @@ void loop() {
 
   //calibrate();      // Helper method to manually steer motors with the help of serial. 
 
-  drawSquare();     // Draw a square, uses values in TargetArr and TargetPositionArr
+  serialControl();
+
+  //drawSquare();     // Draw a square, uses values in TargetArr and TargetPositionArr
   
   //slowTriangle();
   
@@ -147,6 +163,52 @@ void calibrate(){
 
 }
 
+void serialControl(){
+  if (stepperX.distanceToGo() == 0 and stepperY.distanceToGo() == 0) {
+    if (!stepperError) Serial.write(ACK);
+    //stepperX.currentPosition(), stepperY.currentPosition();
+
+    if (Serial.available() >= 4) {
+      #ifdef MESSAGES
+      char message[90];
+      #endif
+      stepperError = false;
+      /*
+      int16_t target[2];
+      Serial.readBytes((char*)&target, 4);
+      stepperX.moveTo(target[0]);
+      stepperY.moveTo(target[1]);
+      snprintf(message, sizeof(message), "X: %lX, Y: %lX", target[0], target[1]);
+      //snprintf(message, sizeof(message), "%04X %04X %04X %04X %04X %04X", target[0], target[1], target[2], target[3], target[4], target[5]);
+      //snprintf(message, sizeof(message), "%08lX %08lX %08lX %08lX %08lX %08lX", target[0], target[1], target[2], target[3], target[4], target[5]);
+      //snprintf(message, sizeof(message), "%lX %lX", target[0], target[1]);
+      //*/
+
+      //char* head;
+      int16_t targetX, targetY;
+      //Serial.readBytes((char)HEADER, head, 1);
+
+      Serial.readBytes((char*)&targetX, 2);
+      Serial.readBytes((char*)&targetY, 2);
+      if (MIN_X > targetX || targetX > MAX_X ||
+          MIN_Y > targetY || targetY > MAX_Y) {
+        Serial.write(NACK);
+        stepperError = true;
+      } else {
+        stepperX.moveTo(targetX);
+        stepperY.moveTo(targetY);
+      }
+
+      #ifdef MESSAGES
+      snprintf(message, sizeof(message), "X: %d, Y: %d", targetX, targetY);
+      //snprintf(message, sizeof(message), "A: %lX, B: %lX", HEADER, head);
+      //*/
+        Serial.println(message);
+      #endif
+    }
+  }
+}
+/*
 void drawSquare(){
   // Draw a square  
   if(stepperX.distanceToGo() == 0 and stepperY.distanceToGo() == 0){
@@ -178,9 +240,9 @@ void slowTriangle(){
       //slowDrawProgressY = TargetPositionArrTriangleY[moveCount];
     }
     
-    /*char message[190];
-    sprintf(message, "M: %d \tCX: %ld; SX: %d; TX: %d \tCY: %ld; SY: %d; TY: %d", moveCount, stepperX.currentPosition(), slowDrawProgressX, TargetPositionArrTriangleX[moveCount], stepperY.currentPosition(), slowDrawProgressX, TargetPositionArrTriangleX[moveCount]);
-    Serial.println(message);//*/
+    //char message[190];
+    //sprintf(message, "M: %d \tCX: %ld; SX: %d; TX: %d \tCY: %ld; SY: %d; TY: %d", moveCount, stepperX.currentPosition(), slowDrawProgressX, TargetPositionArrTriangleX[moveCount], stepperY.currentPosition(), slowDrawProgressX, TargetPositionArrTriangleX[moveCount]);
+    //Serial.println(message);
     const int stepUnits = 5;
 
     if(TargetPositionArrTriangleX[moveCount]<slowDrawProgressX) slowDrawProgressX -= stepUnits;
@@ -218,7 +280,7 @@ void xyScan(){
     }
   }
 }
-
+//*/
 void xStepperHome(){ //this routine should run the motor
   hMinVal = digitalRead(xMin);
   while (hMinVal == LOW)
