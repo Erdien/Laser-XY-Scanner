@@ -36,6 +36,10 @@
 
  This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License.
  */
+
+//#define MESSAGES
+#define PACKET_SIZE 5
+
 #include <AccelStepper.h>
 #define HALFSTEP 8
 #define FULLSTEP 4
@@ -60,10 +64,6 @@
 #define ACK 0x06
 #define NACK 0x15
 
-//#define MESSAGES
-
-bool stepperError;
-
 const int xMin = 10;        // define Min/home inputs
 const int yMin = 11;
 byte hMinVal;               // temporary Min input variable
@@ -86,9 +86,27 @@ int slowDrawProgressY = 0;
 
 int moveCount = 0;          // loop used for drawing
 
+char headerCounter = 0;
+
+enum ErrorState {
+  NO_ERROR = 0,
+  OUT_OF_BOUNDS = 1 << 0,
+  INVALID_HEADER = 1 << 1,
+};
+
+ErrorState stepperError;
+
 // Initialize with pin sequence IN1-IN3-IN2-IN4 for using the AccelStepper with 28BYJ-48
 AccelStepper stepperX(HALFSTEP, s1_in1, s1_in3, s1_in2, s1_in4);
 AccelStepper stepperY(HALFSTEP, s2_in5, s2_in7, s2_in6, s2_in8);
+
+inline ErrorState operator|(ErrorState a, ErrorState b) {
+  return static_cast<ErrorState>(static_cast<int>(a) | static_cast<int>(b));
+}
+inline ErrorState& operator|=(ErrorState& a, ErrorState b) {
+  a = static_cast<ErrorState>(static_cast<int>(a) | static_cast<int>(b));
+  return a;
+}
 
 void setup() {
 
@@ -113,7 +131,7 @@ void setup() {
   stepperY.setAcceleration(1000);
   yStepperHome();                 // runs routine to home Y motor
   //Serial.println("Calibration complete");
-  
+
   //Set the initial speed (read the AccelStepper docs on what "speed" means)
   stepperX.setSpeed(1000.0);
   stepperX.setMaxSpeed(1000.0);
@@ -123,7 +141,7 @@ void setup() {
   stepperY.setAcceleration(20000.0);
 
   //while(!Serial){}
-  stepperError = false;
+  stepperError = NO_ERROR;
   digitalWrite(LASER, HIGH);       // turn on the laser
 }
 
@@ -136,23 +154,24 @@ void loop() {
   serialControl();
 
   //drawSquare();     // Draw a square, uses values in TargetArr and TargetPositionArr
-  
+
   //slowTriangle();
-  
+
   //xyScan();       // Example XY Scan (change either x or y speed to around 30, one slow one fast)
 
   //If the stepper still needs to move (distanceToGo() != 0) then continue to advance (step) the motor
   stepperX.run();
   stepperY.run();
 }
-
-void calibrate(){
+/*
+void calibrate() {
   if(stepperX.distanceToGo() == 0 and stepperY.distanceToGo() == 0){
     char messageSet[50], messageTarget[50];
     int targetX, targetY;
     sprintf(messageSet, "Current x: %ld; Current y: %ld", stepperX.currentPosition(), stepperY.currentPosition());
     Serial.println(messageSet);
-    while (Serial.available() == 0);
+    while (Serial.available() == 0)
+      ;
     targetX = Serial.parseInt();
     targetY = Serial.parseInt();
     sprintf(messageTarget, "Target x: %d; Target y: %d", targetX, targetY);
@@ -160,51 +179,68 @@ void calibrate(){
     stepperX.moveTo(targetX);
     stepperY.moveTo(targetY);
   }
-
 }
+*/
 
 void serialControl(){
   if (stepperX.distanceToGo() == 0 and stepperY.distanceToGo() == 0) {
-    if (!stepperError) Serial.write(ACK);
     //stepperX.currentPosition(), stepperY.currentPosition();
-
-    if (Serial.available() >= 4) {
-      #ifdef MESSAGES
+    if (Serial.available() >= PACKET_SIZE) {
+      if (stepperError == NO_ERROR) Serial.write(ACK);
+      else Serial.write(NACK);
+      headerCounter = 0;
+      stepperError = NO_ERROR;
+#ifdef MESSAGES
       char message[90];
-      #endif
-      stepperError = false;
-      /*
-      int16_t target[2];
-      Serial.readBytes((char*)&target, 4);
-      stepperX.moveTo(target[0]);
-      stepperY.moveTo(target[1]);
-      snprintf(message, sizeof(message), "X: %lX, Y: %lX", target[0], target[1]);
-      //snprintf(message, sizeof(message), "%04X %04X %04X %04X %04X %04X", target[0], target[1], target[2], target[3], target[4], target[5]);
-      //snprintf(message, sizeof(message), "%08lX %08lX %08lX %08lX %08lX %08lX", target[0], target[1], target[2], target[3], target[4], target[5]);
-      //snprintf(message, sizeof(message), "%lX %lX", target[0], target[1]);
-      //*/
+#endif
+      for (int i = Serial.available(); i>0; i = Serial.available()){
+        /*
+        int16_t target[2];
+        Serial.readBytes(NULL, 1);
+        Serial.readBytes((char*)&target, 4);
+        stepperX.moveTo(target[0]);
+        stepperY.moveTo(target[1]);
+        snprintf(message, sizeof(message), "X: %lX, Y: %lX", target[0], target[1]);
+        //snprintf(message, sizeof(message), "%04X %04X %04X %04X %04X %04X", target[0], target[1], target[2], target[3], target[4], target[5]);
+        //snprintf(message, sizeof(message), "%08lX %08lX %08lX %08lX %08lX %08lX", target[0], target[1], target[2], target[3], target[4], target[5]);
+        //snprintf(message, sizeof(message), "%lX %lX", target[0], target[1]);
+        //*/
 
-      //char* head;
-      int16_t targetX, targetY;
-      //Serial.readBytes((char)HEADER, head, 1);
+        char head;
+        int16_t targetX, targetY;
+        Serial.readBytes((char*)&head, 1);
 
-      Serial.readBytes((char*)&targetX, 2);
-      Serial.readBytes((char*)&targetY, 2);
-      if (MIN_X > targetX || targetX > MAX_X ||
-          MIN_Y > targetY || targetY > MAX_Y) {
-        Serial.write(NACK);
-        stepperError = true;
-      } else {
-        stepperX.moveTo(targetX);
-        stepperY.moveTo(targetY);
+        if (head != HEADER){
+          // if PACKET_SIZE ammount of bytes have been read, the packet could've ben misread
+          headerCounter++;
+          if (headerCounter >= PACKET_SIZE){
+            stepperError |= INVALID_HEADER;
+            break;
+          }
+          // if trash data were at the beginning, ignore it and try again
+          continue;
+        }
+        Serial.readBytes((char*)&targetX, 2);
+        Serial.readBytes((char*)&targetY, 2);
+        if (MIN_X > targetX || targetX > MAX_X || MIN_Y > targetY || targetY > MAX_Y) {
+          stepperError |= OUT_OF_BOUNDS;
+          // Probably a packet was misread. Negative-acknowledge master
+          break;
+        }
+
+        if (stepperError == NO_ERROR) {
+          stepperX.moveTo(targetX);
+          stepperY.moveTo(targetY);
+          // Acknowledge master
+          break;
+        }
       }
-
-      #ifdef MESSAGES
+#ifdef MESSAGES
       snprintf(message, sizeof(message), "X: %d, Y: %d", targetX, targetY);
-      //snprintf(message, sizeof(message), "A: %lX, B: %lX", HEADER, head);
+      //snprintf(message, sizeof(message), "A: %lX, B: %lX", targetX, targetY);
       //*/
-        Serial.println(message);
-      #endif
+      Serial.println(message);
+#endif
     }
   }
 }
