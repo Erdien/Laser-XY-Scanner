@@ -36,24 +36,15 @@
 
  This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License.
  */
-
+//#define EXAMPLE
 //#define MESSAGES
 #define PACKET_SIZE 5
 
-#include <AccelStepper.h>
-#define HALFSTEP 8
-#define FULLSTEP 4
+#include "Scanner_setup.h"
 
-// AccelStepper pins
-#define s1_in1 2
-#define s1_in2 3
-#define s1_in3 4
-#define s1_in4 5
-
-#define s2_in5 6
-#define s2_in6 7
-#define s2_in7 8
-#define s2_in8 9
+#ifdef EXAMPLE
+  #include "example.h"
+#endif
 
 #define MIN_X -500
 #define MAX_X 500
@@ -64,27 +55,7 @@
 #define ACK 0x06
 #define NACK 0x15
 
-const int xMin = 10;        // define Min/home inputs
-const int yMin = 11;
-byte hMinVal;               // temporary Min input variable
-
-const int LASER = 12;       // define Laser switch output
-
-//Keeps track of the current direction relative to the face of the motor. 
-//Clockwise (true) or Counterclockwise(false)
-bool xClockwise = true;     // default to clockwise
-bool yClockwise = true;     // default to clockwise
-
-int TargetArrSquare[] = {0, 1, 0, 1}; // 0 = x, 1 = y
-int TargetPositionArrSquare[] = {150, 150, -150, -150};
-
-int TargetPositionArrTriangleX[] = {100, 100,   -150};
-int TargetPositionArrTriangleY[] = {-150,   150, -150};
-
-int slowDrawProgressX = 0;
-int slowDrawProgressY = 0;
-
-int moveCount = 0;          // loop used for drawing
+#define LASER 12            // define Laser switch output
 
 char headerCounter = 0;
 
@@ -95,10 +66,6 @@ enum ErrorState {
 };
 
 ErrorState stepperError;
-
-// Initialize with pin sequence IN1-IN3-IN2-IN4 for using the AccelStepper with 28BYJ-48
-AccelStepper stepperX(HALFSTEP, s1_in1, s1_in3, s1_in2, s1_in4);
-AccelStepper stepperY(HALFSTEP, s2_in5, s2_in7, s2_in6, s2_in8);
 
 inline ErrorState operator|(ErrorState a, ErrorState b) {
   return static_cast<ErrorState>(static_cast<int>(a) | static_cast<int>(b));
@@ -115,30 +82,8 @@ void setup() {
   digitalWrite(LASER, LOW);       // turn off the laser (for the calicration)
 
   // Setup home switch inputs (minimum travel)
-  pinMode(xMin, INPUT);           // set pin to input
-  pinMode(yMin, INPUT);
-  digitalWrite(xMin, HIGH);       // turn on pullup resistors
-  digitalWrite(yMin, HIGH);
 
-  //Serial.println("Homing X");
-  stepperX.setMaxSpeed(1000);     // slow speed for calibrating
-  stepperX.moveTo(4096);          // try to move to max
-  stepperX.setAcceleration(1000);
-  xStepperHome();                 // runs routine to home X motor
-  //Serial.println("Homing Y");
-  stepperY.setMaxSpeed(1000);     // slow speed for calibrating
-  stepperY.moveTo(4096);          // try to move to max
-  stepperY.setAcceleration(1000);
-  yStepperHome();                 // runs routine to home Y motor
-  //Serial.println("Calibration complete");
-
-  //Set the initial speed (read the AccelStepper docs on what "speed" means)
-  stepperX.setSpeed(1000.0);
-  stepperX.setMaxSpeed(1000.0);
-  stepperX.setAcceleration(20000.0);
-  stepperY.setSpeed(1000.0);
-  stepperY.setMaxSpeed(1000.0);
-  stepperY.setAcceleration(20000.0);
+  stepperInit(1000.0, 1000.0, 20000.0);
 
   //while(!Serial){}
   stepperError = NO_ERROR;
@@ -245,109 +190,6 @@ void serialControl(){
   }
 }
 /*
-void drawSquare(){
-  // Draw a square  
-  if(stepperX.distanceToGo() == 0 and stepperY.distanceToGo() == 0){
-    if(moveCount == 3){
-      moveCount = 0;
-    } else {
-      moveCount = moveCount + 1;
-    }
 
-    if (TargetArrSquare[moveCount] == 0) {
-      stepperX.moveTo(TargetPositionArrSquare[moveCount]);
-    }
-    else {
-      stepperY.moveTo(TargetPositionArrSquare[moveCount]);
-    }
-  }
-}
-
-void slowTriangle(){
-  if(stepperX.distanceToGo() == 0 and stepperY.distanceToGo() == 0){
-    if (slowDrawProgressX == TargetPositionArrTriangleX[moveCount] and slowDrawProgressY == TargetPositionArrTriangleY[moveCount]) {
-      if(moveCount == 2){
-        moveCount = 0;
-      } else {
-        moveCount = moveCount + 1;
-      }
-
-      //slowDrawProgressX = TargetPositionArrTriangleX[moveCount];
-      //slowDrawProgressY = TargetPositionArrTriangleY[moveCount];
-    }
-    
-    //char message[190];
-    //sprintf(message, "M: %d \tCX: %ld; SX: %d; TX: %d \tCY: %ld; SY: %d; TY: %d", moveCount, stepperX.currentPosition(), slowDrawProgressX, TargetPositionArrTriangleX[moveCount], stepperY.currentPosition(), slowDrawProgressX, TargetPositionArrTriangleX[moveCount]);
-    //Serial.println(message);
-    const int stepUnits = 5;
-
-    if(TargetPositionArrTriangleX[moveCount]<slowDrawProgressX) slowDrawProgressX -= stepUnits;
-    else if (TargetPositionArrTriangleX[moveCount]>slowDrawProgressX) slowDrawProgressX += stepUnits;
-    if(TargetPositionArrTriangleY[moveCount]<slowDrawProgressY) slowDrawProgressY -= stepUnits;
-    else if (TargetPositionArrTriangleY[moveCount]>slowDrawProgressY) slowDrawProgressY += stepUnits;
-
-    stepperX.moveTo(slowDrawProgressX);
-    stepperY.moveTo(slowDrawProgressY);
-  }  
-}
-
-void xyScan(){
-  // Slow X scan
-  // Check to see if the stepper has reached the target:
-  if(stepperX.distanceToGo() == 0){
-    if(xClockwise == true){
-      xClockwise = false;  // move counterclockwise
-      stepperX.moveTo(-20); // go back to the "home" (original) position
-    } else {
-      xClockwise = true;   // move clockwise
-      stepperX.moveTo(100);  // go to the target position
-    }
-  }
-
-  // Fast Y scan
-  // Check to see if the stepper has reached the target:
-  if(stepperY.distanceToGo() == 0){
-    if(yClockwise == true){
-      yClockwise = false;  // move counterclockwise
-      stepperY.moveTo(0);  // go back to the "home" (original) position
-    } else {
-      yClockwise = true;   // move clockwise
-      stepperY.moveTo(100);  // go to the target position
-    }
-  }
-}
 //*/
-void xStepperHome(){ //this routine should run the motor
-  hMinVal = digitalRead(xMin);
-  while (hMinVal == LOW)
-  {
-    //backwards slowly till it hits the switch and stops
-    stepperX.moveTo(4096);
-    stepperX.run();
-    hMinVal = digitalRead(xMin);
-  }
-  stepperX.setCurrentPosition(0); //set current motor position to zero
-  stepperX.moveTo(-580-247);
-  while (stepperX.distanceToGo() != 0){
-    stepperX.run();
-  }
-  stepperX.setCurrentPosition(0); //set current motor position to zero
-}
-
-void yStepperHome(){ //this routine should run the motor
-  hMinVal = digitalRead(yMin);
-  while (hMinVal == LOW)
-  {
-    //backwards slowly till it hits the switch and stops
-    stepperY.moveTo(4096);
-    stepperY.run();
-    hMinVal = digitalRead(yMin);
-  }
-  stepperY.setCurrentPosition(0); //set current motor position to zero
-  stepperY.moveTo(-900+175);
-  while (stepperY.distanceToGo() != 0){
-    stepperY.run();
-  }
-  stepperY.setCurrentPosition(0); //set current motor position to zero
-}
 
