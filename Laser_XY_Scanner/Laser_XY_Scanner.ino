@@ -46,7 +46,6 @@
 #ifdef HILBERT
   #include "hilbert.h"
 #endif
-
 #ifdef EXAMPLE
   #include "example.h"
 #endif
@@ -91,6 +90,7 @@ void setup() {
 
   //while(!Serial){}
   stepperError = NO_ERROR;
+
 
 #ifdef HILBERT
   hilbertInit();
