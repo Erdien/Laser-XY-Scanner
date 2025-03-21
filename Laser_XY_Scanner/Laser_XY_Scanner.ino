@@ -38,7 +38,7 @@
  */
 //#define EXAMPLE
 #define HILBERT
-//#define MESSAGES
+#define MESSAGES
 #define PACKET_SIZE 5
 
 #include "Scanner_setup.h"
@@ -185,13 +185,14 @@ void serialControl(){
           // Acknowledge master
           break;
         }
-      }
+      
 #ifdef MESSAGES
       snprintf(message, sizeof(message), "X: %d, Y: %d", targetX, targetY);
       //snprintf(message, sizeof(message), "A: %lX, B: %lX", targetX, targetY);
       //*/
       Serial.println(message);
 #endif
+      }
     }
   }
 }
