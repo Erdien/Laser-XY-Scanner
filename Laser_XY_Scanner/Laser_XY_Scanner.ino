@@ -37,8 +37,8 @@
  This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License.
  */
 //#define EXAMPLE
-#define HILBERT
-#define MESSAGES
+//#define HILBERT
+//#define MESSAGES
 #define PACKET_SIZE 5
 
 #include "Scanner_setup.h"
@@ -104,8 +104,8 @@ void loop() {
   // Uncomment only one drawing function at a time, then experiment to make your own!
 
   //calibrate();      // Helper method to manually steer motors with the help of serial. 
-  //serialControl();
-  hilbertRun();
+  serialControl();
+  //hilbertRun();
   //drawSquare();     // Draw a square, uses values in TargetArr and TargetPositionArr
   //slowTriangle();
   //xyScan();       // Example XY Scan (change either x or y speed to around 30, one slow one fast)
@@ -180,8 +180,8 @@ void serialControl(){
         }
 
         if (stepperError == NO_ERROR) {
-          stepperX.moveTo(targetX);
-          stepperY.moveTo(targetY);
+          backlashX.moveToCounteractBacklash(targetX);
+          backlashY.moveToCounteractBacklash(targetY);
           // Acknowledge master
           break;
         }

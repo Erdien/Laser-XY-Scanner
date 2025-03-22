@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <AccelStepper.h>
+#include "pointer_with_backlash.h"
 
 #define HALFSTEP 8
 #define FULLSTEP 4
@@ -29,6 +30,8 @@
 //extern byte hMinVal;               // temporary Min input variable
 extern AccelStepper stepperX;
 extern AccelStepper stepperY;
+extern PointerWithBacklash backlashX;
+extern PointerWithBacklash backlashY;
 
 void stepperInit(float speed, float maxSpeed, float acceleration);
 

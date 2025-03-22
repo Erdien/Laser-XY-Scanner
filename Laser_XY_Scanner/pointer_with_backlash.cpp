@@ -1,4 +1,3 @@
-#include "main2.h"
 #include "pointer_with_backlash.h"
 
 int clamp(int x, int min, int max){
@@ -11,11 +10,7 @@ int clamp(int x, int min, int max){
   }
 }
 
-PointerWithBacklash::PointerWithBacklash(Pointer &pointer, int maxBacklash) : p(pointer), maxBacklash(maxBacklash), backlash(0) {
-  /*this->p = pointer;
-  this->maxBacklash = maxBacklash;
-  this->backlash = 0;*/
-}
+PointerWithBacklash::PointerWithBacklash(Pointer &pointer, int maxBacklash) : p(pointer), maxBacklash(maxBacklash), backlash(0) {}
 
 
 int PointerWithBacklash::moveByWithBacklash(int value){
@@ -46,7 +41,7 @@ int PointerWithBacklash::moveToWithBacklash(int value){
   int ret = this->p.moveTo(value);
 
   if (0 == ret){
-      this->backlash = clamp(this->backlash - currVal + value, -this->maxBacklash, this->maxBacklash);
+      this->backlash = clamp(this->backlash - currVal + value, 0, this->maxBacklash);
   }
   
   return ret;
@@ -58,7 +53,10 @@ int PointerWithBacklash::moveToCounteractBacklash(int value){
   if (value - currentValue > 0){
       value += this->maxBacklash;
   }else if (value - currentValue < 0){
-      value -= this->maxBacklash;
+  //}else if (value - currentValue < 0){
+      //value -= this->maxBacklash;
+  }else {
+      value += this->backlash;
   }
 
   return moveToWithBacklash(value);

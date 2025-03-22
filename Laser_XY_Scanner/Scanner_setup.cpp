@@ -1,5 +1,4 @@
 #include "Scanner_setup.h"
-#include "pointer_with_backlash.h"
 
 byte hMinVal;
 // Initialize with pin sequence IN1-IN3-IN2-IN4 for using the AccelStepper with 28BYJ-48
@@ -8,10 +7,10 @@ AccelStepper stepperY(HALFSTEP, s2_in5, s2_in7, s2_in6, s2_in8);
 
 Range range(-500, 500);
 Pointer pointerX(range, stepperX);
-PointerWithBacklash backlashX(pointerX, 10);
+PointerWithBacklash backlashX(pointerX, 0);
 
 Pointer pointerY(range, stepperY);
-PointerWithBacklash backlashY(pointerY, 10);
+PointerWithBacklash backlashY(pointerY, 27);
 
 void stepperInit(float speed, float maxSpeed, float acceleration){
   pinMode(PIN_X_MIN, INPUT);           // set pin to input

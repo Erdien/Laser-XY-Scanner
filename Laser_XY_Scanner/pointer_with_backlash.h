@@ -2,7 +2,7 @@
 #ifndef BACKLASHED_POINTER
 #define BACKLASHED_POINTER
 
-#include "main2.h"
+#include "range_pointer.h"
 
 class PointerWithBacklash{
   private:
