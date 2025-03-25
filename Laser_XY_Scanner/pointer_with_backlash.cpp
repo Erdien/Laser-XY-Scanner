@@ -18,7 +18,7 @@ int PointerWithBacklash::moveByWithBacklash(int value){
   // assert, that pointer is initialized (haven't done that yet)
   int ret = this->p.moveBy(value);
   if (0 == ret){
-      this->backlash = clamp(this->backlash + value, -this->maxBacklash, this->maxBacklash);
+      this->backlash = clamp(this->backlash + value, 0, this->maxBacklash);
   }
   
   return ret;
@@ -28,7 +28,7 @@ int PointerWithBacklash::moveByCounteractBacklash(int value){
   if (value > 0){
       value += this->maxBacklash - this->backlash;
   }else if (value < 0){
-      value -= this->maxBacklash + this->backlash;
+      value -= this->backlash;
   }
   
   return moveByWithBacklash(value);
