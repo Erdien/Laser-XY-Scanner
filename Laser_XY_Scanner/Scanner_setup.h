@@ -24,7 +24,7 @@
 
 #define MAX_STEPPER 4096
 #define STEPPER_HOME_X -827
-#define STEPPER_HOME_y -725
+#define STEPPER_HOME_y -615
 
 
 //extern byte hMinVal;               // temporary Min input variable

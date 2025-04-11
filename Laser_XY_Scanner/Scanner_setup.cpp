@@ -10,7 +10,7 @@ Pointer pointerX(range, stepperX);
 PointerWithBacklash backlashX(pointerX, 0);
 
 Pointer pointerY(range, stepperY);
-PointerWithBacklash backlashY(pointerY, 27);
+PointerWithBacklash backlashY(pointerY, 23);
 
 void stepperInit(float speed, float maxSpeed, float acceleration){
   pinMode(PIN_X_MIN, INPUT);           // set pin to input

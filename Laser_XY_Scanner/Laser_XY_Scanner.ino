@@ -127,8 +127,8 @@ void calibrate() {
     targetY = Serial.parseInt();
     sprintf(messageTarget, "Target x: %d; Target y: %d", targetX, targetY);
     Serial.println(messageTarget);
-    stepperX.moveTo(targetX);
-    stepperY.moveTo(targetY);
+    backlashX.moveToCounteractBacklash(targetX);
+    backlashY.moveToCounteractBacklash(targetY);
   }
 }
 */
