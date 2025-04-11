@@ -39,7 +39,8 @@
 //#define EXAMPLE
 //#define HILBERT
 //#define MESSAGES
-#define PACKET_SIZE 5
+#define PACKET_SIZE_BIG 6
+#define PACKET_SIZE_SMALL 2
 
 #include "Scanner_setup.h"
 
@@ -56,6 +57,10 @@
 #define MAX_Y 500
 
 #define HEADER 0x5e   //"^" dec 94
+#define HEADER_MOVE_TO 0x5f
+#define HEADER_MOVE_BY 0x60
+#define HEADER_LASER_ON 0x61
+#define HEADER_LASER_OFF 0x62
 #define ACK 0x06
 #define NACK 0x15
 
@@ -66,6 +71,7 @@ enum ErrorState {
   NO_ERROR = 0,
   OUT_OF_BOUNDS = 1 << 0,
   INVALID_HEADER = 1 << 1,
+  INVALID_SUB_HEADER = 1 << 2,
 };
 
 ErrorState stepperError;
@@ -136,7 +142,7 @@ void calibrate() {
 void serialControl(){
   if (stepperX.distanceToGo() == 0 and stepperY.distanceToGo() == 0) {
     //stepperX.currentPosition(), stepperY.currentPosition();
-    if (Serial.available() >= PACKET_SIZE) {
+    if (Serial.available() >= PACKET_SIZE_SMALL) {
       if (stepperError == NO_ERROR) Serial.write(ACK);
       else Serial.write(NACK);
       headerCounter = 0;
@@ -158,33 +164,68 @@ void serialControl(){
         //*/
 
         char head;
+        char head2;
         int16_t targetX, targetY;
         Serial.readBytes((char*)&head, 1);
 
         if (head != HEADER){
-          // if PACKET_SIZE ammount of bytes have been read, the packet could've ben misread
+          // if PACKET_SIZE_BIG ammount of bytes have been read, the packet could've ben misread
           headerCounter++;
-          if (headerCounter >= PACKET_SIZE){
+          if (headerCounter >= PACKET_SIZE_BIG){
             stepperError |= INVALID_HEADER;
             break;
           }
           // if trash data were at the beginning, ignore it and try again
           continue;
         }
-        Serial.readBytes((char*)&targetX, 2);
-        Serial.readBytes((char*)&targetY, 2);
-        if (MIN_X > targetX || targetX > MAX_X || MIN_Y > targetY || targetY > MAX_Y) {
-          stepperError |= OUT_OF_BOUNDS;
-          // Probably a packet was misread. Negative-acknowledge master
-          break;
+        
+        Serial.readBytes((char*)&head2, 1);
+        switch (head2) {
+          case HEADER_MOVE_TO:
+            Serial.readBytes((char*)&targetX, 2);
+            Serial.readBytes((char*)&targetY, 2);
+            if (MIN_X > targetX || targetX > MAX_X || MIN_Y > targetY || targetY > MAX_Y) {
+              stepperError |= OUT_OF_BOUNDS;
+              // Probably a packet was misread. Negative-acknowledge master
+              break;
+            }
+            if (stepperError == NO_ERROR) {
+              backlashX.moveToCounteractBacklash(targetX);
+              backlashY.moveToCounteractBacklash(targetY);
+              // Acknowledge master
+              break;
+            }
+            break;
+          case HEADER_MOVE_BY:
+            Serial.readBytes((char*)&targetX, 2);
+            Serial.readBytes((char*)&targetY, 2);
+            if (MIN_X > targetX + stepperX.currentPosition() ||
+              targetX + stepperX.currentPosition() > MAX_X ||
+              MIN_Y > targetY + stepperY.currentPosition() ||
+              targetY > MAX_Y + stepperY.currentPosition()) {
+                stepperError |= OUT_OF_BOUNDS;
+                // Probably a packet was misread. Negative-acknowledge master
+                break;
+            }
+            if (stepperError == NO_ERROR) {
+              backlashX.moveByCounteractBacklash(targetX);
+              backlashY.moveByCounteractBacklash(targetY);
+              // Acknowledge master
+              break;
+            }
+            break;
+          case HEADER_LASER_ON:
+            digitalWrite(LASER, HIGH);
+            break;
+          case HEADER_LASER_OFF:
+            digitalWrite(LASER, LOW);
+            break;
+          default:
+            stepperError |= INVALID_SUB_HEADER;
+            break;
         }
 
-        if (stepperError == NO_ERROR) {
-          backlashX.moveToCounteractBacklash(targetX);
-          backlashY.moveToCounteractBacklash(targetY);
-          // Acknowledge master
-          break;
-        }
+        
       
 #ifdef MESSAGES
       snprintf(message, sizeof(message), "X: %d, Y: %d", targetX, targetY);
