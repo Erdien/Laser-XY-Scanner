@@ -37,16 +37,12 @@
  This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License.
  */
 //#define EXAMPLE
-//#define HILBERT
 //#define MESSAGES
 #define PACKET_SIZE_BIG 6
 #define PACKET_SIZE_SMALL 2
 
 #include "Scanner_setup.h"
 
-#ifdef HILBERT
-  #include "hilbert.h"
-#endif
 #ifdef EXAMPLE
   #include "example.h"
 #endif
@@ -97,11 +93,6 @@ void setup() {
   //while(!Serial){}
   stepperError = NO_ERROR;
 
-
-#ifdef HILBERT
-  hilbertInit();
-#endif
-
   digitalWrite(LASER, HIGH);       // turn on the laser
 }
 
@@ -111,7 +102,6 @@ void loop() {
 
   //calibrate();      // Helper method to manually steer motors with the help of serial. 
   serialControl();
-  //hilbertRun();
   //drawSquare();     // Draw a square, uses values in TargetArr and TargetPositionArr
   //slowTriangle();
   //xyScan();       // Example XY Scan (change either x or y speed to around 30, one slow one fast)
