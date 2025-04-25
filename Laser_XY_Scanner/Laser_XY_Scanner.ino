@@ -93,7 +93,7 @@ void setup() {
   //while(!Serial){}
   stepperError = NO_ERROR;
 
-  digitalWrite(LASER, HIGH);       // turn on the laser
+  //digitalWrite(LASER, HIGH);       // turn on the laser
 }
 
 void loop() {
