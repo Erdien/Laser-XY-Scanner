@@ -23,8 +23,8 @@
 #define PIN_Y_MIN 11
 
 #define MAX_STEPPER 4096
-#define STEPPER_HOME_X -827
-#define STEPPER_HOME_y -615
+#define STEPPER_HOME_X -836
+#define STEPPER_HOME_y -613
 
 
 //extern byte hMinVal;               // temporary Min input variable
